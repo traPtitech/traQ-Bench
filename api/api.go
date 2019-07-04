@@ -7,15 +7,26 @@ import (
 	traqApi "github.com/sapphi-red/go-traq"
 )
 
+var (
+	baseUrl = "http://localhost:3000/api/1.0"
+)
+
 type User struct {
 	session string
 	client  *traqApi.APIClient
 }
 
-func NewUser(id string, pass string) User {
+func newDevConfiguration() *traqApi.Configuration {
+	conf := traqApi.NewConfiguration()
+	conf.BasePath = baseUrl
+	return conf
+}
+
+// ユーザーとしてログインし新しいユーザーインスタンスを返します。
+func NewUser(id string, pass string) (*User, error) {
 	var user User
 
-	client := traqApi.NewAPIClient(traqApi.NewConfiguration())
+	client := traqApi.NewAPIClient(newDevConfiguration())
 	res, err := client.AuthenticationApi.LoginPost(context.Background(), &traqApi.LoginPostOpts{
 		Redirect: optional.EmptyString(),
 		InlineObject: optional.NewInterface(
@@ -37,18 +48,19 @@ func NewUser(id string, pass string) User {
 	}
 
 	if user.session == "" {
-		fmt.Println("Failed to get session")
-		return User{}
+		err := fmt.Errorf("failed to get session")
+		return &User{}, err
 	}
 
-	conf := traqApi.NewConfiguration()
-	conf.AddDefaultHeader("Session", fmt.Sprintf("r_session=%s", user.session))
+	conf := newDevConfiguration()
+	conf.AddDefaultHeader("Cookie", fmt.Sprintf("r_session=%s", user.session))
 	user.client = traqApi.NewAPIClient(conf)
 
-	return user
+	return &user, nil
 }
 
-func (user *User) createUser(id string, pass string) User {
+// 新しいユーザーを作成します。
+func (user *User) CreateUser(id string, pass string) (*User, error) {
 	_, err := user.client.UserApi.UsersPost(context.Background(), &traqApi.UsersPostOpts{
 		InlineObject4: optional.NewInterface(
 			traqApi.InlineObject4{
@@ -57,8 +69,8 @@ func (user *User) createUser(id string, pass string) User {
 			}),
 	})
 	if err != nil {
-		fmt.Printf("Failed to create user for id %s and pass %s: %s\n", id, pass, err)
-		return User{}
+		err := fmt.Errorf("failed to create user for id %s and pass %s: %s\n", id, pass, err)
+		return &User{}, err
 	}
 
 	fmt.Printf("Successfully created user with id %s", id)
