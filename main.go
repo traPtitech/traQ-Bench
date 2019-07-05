@@ -2,13 +2,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	i "github.com/traPtitech/traQ-Bench/init"
 	r "github.com/traPtitech/traQ-Bench/run"
+	"log"
 )
 
 func main() {
 	flag.Parse()
+	log.SetFlags(log.Ldate | log.Lmicroseconds)
+
 	switch flag.Arg(0) {
 	case "init":
 		i.Init()
@@ -17,6 +19,6 @@ func main() {
 	case "userdump":
 		i.DumpUsers()
 	default:
-		fmt.Println("Error unknown argument")
+		log.Println("Error unknown argument")
 	}
 }

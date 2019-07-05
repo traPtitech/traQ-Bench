@@ -6,6 +6,7 @@ import (
 	"github.com/antihax/optional"
 	"github.com/r3labs/sse"
 	traqApi "github.com/sapphi-red/go-traq"
+	"log"
 )
 
 var (
@@ -67,6 +68,8 @@ func (user *User) Login() error {
 	conf := newDevConfiguration()
 	conf.AddDefaultHeader("Cookie", fmt.Sprintf("r_session=%s", user.session))
 	user.client = traqApi.NewAPIClient(conf)
+
+	log.Printf("Successfully logged in for user %s\n", user.UserId)
 	return nil
 }
 
@@ -97,7 +100,13 @@ const (
 )
 
 func (user *User) PostHeartBeat(status HeartBeatStatus, channelId string) error {
-	_, err := user.client.HeartbeatApi.HeartbeatPost(context.Background(), string(status), channelId)
+	_, err := user.client.HeartbeatApi.HeartbeatPost(context.Background(), &traqApi.HeartbeatPostOpts{
+		InlineObject14: optional.NewInterface(
+			traqApi.InlineObject14{
+				Status:    string(status),
+				ChannelId: channelId,
+			}),
+	})
 	return err
 }
 

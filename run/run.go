@@ -2,10 +2,10 @@ package run
 
 import (
 	"encoding/json"
-	"fmt"
 	traqApi "github.com/sapphi-red/go-traq"
 	"github.com/traPtitech/traQ-Bench/api"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"sync"
@@ -17,48 +17,48 @@ type AtomicBool struct {
 }
 
 func Run() {
-	fmt.Println("run")
+	log.Println("run")
 
 	if _, err := os.Stat("./users.json"); err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("users.json does not exist, please run init first.")
+			log.Println("users.json does not exist, please run init first.")
 			return
 		} else {
-			fmt.Println("Something went wrong while getting file info", err)
+			log.Println("Something went wrong while getting file info", err)
 			return
 		}
 	}
 
 	file, err := os.Open("./users.json")
 	if err != nil {
-		fmt.Println("Failed to open file", err)
+		log.Println("Failed to open file", err)
 		return
 	}
 
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		fmt.Println("Failed to read file", err)
+		log.Println("Failed to read file", err)
 		return
 	}
 
 	var users []*api.User
 	err = json.Unmarshal(bytes, &users)
 	if err != nil {
-		fmt.Println("Failed to unmarshal users.json file", err)
+		log.Println("Failed to unmarshal users.json file", err)
 		return
 	}
 
-	fmt.Println("Loaded users.json")
+	log.Println("Loaded users.json")
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 30; i++ {
 		wg := sync.WaitGroup{}
-		for j := 0; j < 30; j++ {
+		for j := 0; j < 10; j++ {
 			wg.Add(1)
-			user := users[i*30+j]
+			user := users[i*10+j]
 			go func() {
 				err := user.Login()
 				if err != nil {
-					fmt.Println("User "+user.UserId+" login failed", err)
+					log.Println("User "+user.UserId+" login failed", err)
 					return
 				}
 				wg.Done()
@@ -67,13 +67,13 @@ func Run() {
 		wg.Wait()
 	}
 
-	fmt.Println("Users login finished")
-	fmt.Println("Starting benchmark")
+	log.Println("Users login finished")
+	log.Println("Starting benchmark")
 
 	// Do benchmark
 	admin, err := api.NewUser("traq", "traq")
 	if err != nil {
-		fmt.Println("Failed to prepare traq account")
+		log.Println("Failed to prepare traq account")
 		return
 	}
 	channels, err := admin.GetChannels()
@@ -86,7 +86,7 @@ func Run() {
 
 	wg.Wait()
 
-	fmt.Println("Benchmark finished")
+	log.Println("Benchmark finished")
 }
 
 func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) {
@@ -105,7 +105,7 @@ func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) 
 			case <-t.C:
 				err := user.PostHeartBeat(api.Monitoring, (*channels)[rand.Intn(len(*channels))].ChannelId)
 				if err != nil {
-					fmt.Println(user.UserId+" error: ", err)
+					log.Println(user.UserId+" error: ", err)
 				}
 			case <-end:
 				break loop

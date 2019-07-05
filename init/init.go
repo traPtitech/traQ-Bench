@@ -2,15 +2,15 @@ package init
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/traPtitech/traQ-Bench/api"
+	"log"
 	"os"
 	"strconv"
 	"sync"
 )
 
 func Init() {
-	fmt.Println("init")
+	log.Println("init")
 
 	admin, err := api.NewUser("traq", "traq")
 	if err != nil {
@@ -30,7 +30,7 @@ func Init() {
 			go func() {
 				user, err := admin.CreateUser(id, pass)
 				if err != nil {
-					fmt.Println(err)
+					log.Println(err)
 				}
 				mut.Lock()
 				users = append(users, user)
@@ -45,19 +45,19 @@ func Init() {
 	bytes, err := json.Marshal(users)
 	if _, err := os.Stat("./users.json"); err == nil {
 		err = os.Remove("./users.json")
-		fmt.Println("Failed to remove file", err)
+		log.Println("Failed to remove file", err)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
 
 	file, err := os.Create("./users.json")
 	if err != nil {
-		fmt.Println("Failed to create to file", err)
+		log.Println("Failed to create to file", err)
 	}
 
 	_, err = file.Write(bytes)
 	if err != nil {
-		fmt.Println("Failed to output to file", err)
+		log.Println("Failed to output to file", err)
 	}
 
 	_ = file.Close()
@@ -76,19 +76,19 @@ func DumpUsers() {
 	bytes, err := json.Marshal(users)
 	if _, err := os.Stat("./users.json"); err == nil {
 		err = os.Remove("./users.json")
-		fmt.Println("Failed to remove file", err)
+		log.Println("Failed to remove file", err)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
 
 	file, err := os.Create("./users.json")
 	if err != nil {
-		fmt.Println("Failed to create to file", err)
+		log.Println("Failed to create to file", err)
 	}
 
 	_, err = file.Write(bytes)
 	if err != nil {
-		fmt.Println("Failed to output to file", err)
+		log.Println("Failed to output to file", err)
 	}
 
 	_ = file.Close()
