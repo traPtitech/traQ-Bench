@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/antihax/optional"
+	"github.com/r3labs/sse"
 	traqApi "github.com/sapphi-red/go-traq"
 )
 
@@ -12,8 +13,10 @@ var (
 )
 
 type User struct {
-	session string
-	client  *traqApi.APIClient
+	UserId   string             `json:"id"`
+	Password string             `json:"password"`
+	session  string             `json:"-"`
+	client   *traqApi.APIClient `json:"-"`
 }
 
 func newDevConfiguration() *traqApi.Configuration {
@@ -25,14 +28,25 @@ func newDevConfiguration() *traqApi.Configuration {
 // ユーザーとしてログインし新しいユーザーインスタンスを返します。
 func NewUser(id string, pass string) (*User, error) {
 	var user User
+	user.UserId = id
+	user.Password = pass
 
+	err := user.Login()
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (user *User) Login() error {
 	client := traqApi.NewAPIClient(newDevConfiguration())
 	res, err := client.AuthenticationApi.LoginPost(context.Background(), &traqApi.LoginPostOpts{
 		Redirect: optional.EmptyString(),
 		InlineObject: optional.NewInterface(
 			traqApi.InlineObject{
-				Name: id,
-				Pass: pass,
+				Name: user.UserId,
+				Pass: user.Password,
 			}),
 	})
 	if err != nil {
@@ -41,22 +55,19 @@ func NewUser(id string, pass string) (*User, error) {
 
 	for _, v := range res.Cookies() {
 		if v.Name == "r_session" {
-			user = User{
-				session: v.Value,
-			}
+			user.session = v.Value
 		}
 	}
 
 	if user.session == "" {
 		err := fmt.Errorf("failed to get session")
-		return &User{}, err
+		return err
 	}
 
 	conf := newDevConfiguration()
 	conf.AddDefaultHeader("Cookie", fmt.Sprintf("r_session=%s", user.session))
 	user.client = traqApi.NewAPIClient(conf)
-
-	return &user, nil
+	return nil
 }
 
 // 新しいユーザーを作成します。
@@ -75,4 +86,29 @@ func (user *User) CreateUser(id string, pass string) (*User, error) {
 
 	fmt.Printf("Successfully created user with id %s\n", id)
 	return NewUser(id, pass)
+}
+
+type HeartBeatStatus string
+
+const (
+	None       HeartBeatStatus = "none"
+	Monitoring HeartBeatStatus = "monitoring"
+	Editing    HeartBeatStatus = "editing"
+)
+
+func (user *User) PostHeartBeat(status HeartBeatStatus, channelId string) error {
+	_, err := user.client.HeartbeatApi.HeartbeatPost(context.Background(), string(status), channelId)
+	return err
+}
+
+func (user *User) ConnectSSE() {
+	_ = sse.NewClient(baseUrl + "/notification")
+}
+
+func (user *User) GetChannels() ([]traqApi.Channel, error) {
+	channels, _, err := user.client.ChannelApi.ChannelsGet(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return channels, nil
 }
