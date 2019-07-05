@@ -73,6 +73,6 @@ func (user *User) CreateUser(id string, pass string) (*User, error) {
 		return &User{}, err
 	}
 
-	fmt.Printf("Successfully created user with id %s", id)
+	fmt.Printf("Successfully created user with id %s\n", id)
 	return NewUser(id, pass)
 }
