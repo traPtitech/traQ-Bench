@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	traqApi "github.com/sapphi-red/go-traq"
 	"github.com/traPtitech/traQ-Bench/api"
 )
 
@@ -83,7 +82,23 @@ func Run() {
 		log.Println("Failed to prepare traq account")
 		return
 	}
+
+	channelId := ""
 	channels, err := admin.GetChannels()
+	if err != nil {
+		log.Println("Failed to get channels")
+		return
+	}
+	for _, v := range channels {
+		if v.Name == "general" && v.ChannelId != "" {
+			channelId = v.ChannelId
+			break
+		}
+	}
+	if channelId == "" {
+		log.Println("Couldn't find channel general?")
+		return
+	}
 
 	err400 := 0
 	err500 := 0
@@ -93,7 +108,7 @@ func Run() {
 	for _, v := range users {
 		wg.Add(1)
 		go func(v *api.User) {
-			errs := runSingle(v, &wg, &channels)
+			errs := runSingle(v, &wg, channelId)
 			err400 += errs.err400
 			err500 += errs.err500
 			errUnknown += errs.errUnknown
@@ -109,7 +124,7 @@ func Run() {
 	log.Println("Unknown Error:", errUnknown)
 }
 
-func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) *httpErrors {
+func runSingle(user *api.User, wg *sync.WaitGroup, channelId string) *httpErrors {
 	user.ConnectSSE()
 
 	rand.Seed(time.Now().UnixNano())
@@ -126,18 +141,6 @@ loop:
 	for {
 		select {
 		case <-t.C:
-			var channelId string
-			for _, v := range *channels {
-				if v.Name == "general" && v.ChannelId != "" {
-					channelId = v.ChannelId
-					break
-				}
-			}
-			if channelId == "" {
-				log.Println("Couldn't find channel general?")
-				continue
-			}
-
 			err := user.PostHeartBeat(api.HeartbeatStatuses[rand.Intn(len(api.HeartbeatStatuses))], channelId)
 			if err != nil {
 				errStr := err.Error()
