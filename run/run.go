@@ -126,7 +126,11 @@ loop:
 	for {
 		select {
 		case <-t.C:
-			err := user.PostHeartBeat(api.Monitoring, (*channels)[rand.Intn(len(*channels))].ChannelId)
+			channelId := (*channels)[rand.Intn(len(*channels))].ChannelId
+			if channelId == "" {
+				continue
+			}
+			err := user.PostHeartBeat(api.Monitoring, channelId)
 			if err != nil {
 				errStr := err.Error()
 				log.Println(user.UserId, "error:", errStr)
