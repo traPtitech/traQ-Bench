@@ -17,6 +17,12 @@ type AtomicBool struct {
 	Bool bool
 }
 
+type httpErrors struct {
+	err400     int
+	err500     int
+	errUnknown int
+}
+
 func Run() {
 	log.Println("run")
 
@@ -79,18 +85,31 @@ func Run() {
 	}
 	channels, err := admin.GetChannels()
 
+	err400 := 0
+	err500 := 0
+	errUnknown := 0
+
 	wg := sync.WaitGroup{}
 	for _, v := range users {
 		wg.Add(1)
-		go runSingle(v, &wg, &channels)
+		go func(v *api.User) {
+			errs := runSingle(v, &wg, &channels)
+			err400 += errs.err400
+			err500 += errs.err500
+			errUnknown += errs.errUnknown
+		}(v)
 	}
 
 	wg.Wait()
 
 	log.Println("Benchmark finished")
+
+	log.Println("400 Error:", err400)
+	log.Println("500 Error:", err500)
+	log.Println("Unknown Error:", errUnknown)
 }
 
-func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) {
+func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) *httpErrors {
 	user.ConnectSSE()
 
 	rand.Seed(time.Now().UnixNano())
@@ -99,18 +118,38 @@ func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) 
 	end := time.After(45 * time.Second)
 	t := time.NewTicker(3 * time.Second)
 
-  loop:
+	err400 := 0
+	err500 := 0
+	errUnknown := 0
+
+	loop:
 		for {
 			select {
 			case <-t.C:
 				err := user.PostHeartBeat(api.Monitoring, (*channels)[rand.Intn(len(*channels))].ChannelId)
 				if err != nil {
-					log.Println(user.UserId, "error:", err.Error())
+					errStr := err.Error()
+					log.Println(user.UserId, "error:", errStr)
+
+					if errStr == "400 Bad Request" {
+						err400++
+					} else if errStr == "500 Internal Server Error" {
+						err500++
+					} else {
+						errUnknown++
+					}
 				}
 			case <-end:
 				break loop
 			}
 		}
+
 	t.Stop()
 	wg.Done()
+
+	return &httpErrors{
+		err400:     err400,
+		err500:     err500,
+		errUnknown: errUnknown,
+	}
 }
