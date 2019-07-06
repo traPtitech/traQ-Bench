@@ -122,27 +122,27 @@ func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) 
 	err500 := 0
 	errUnknown := 0
 
-	loop:
-		for {
-			select {
-			case <-t.C:
-				err := user.PostHeartBeat(api.Monitoring, (*channels)[rand.Intn(len(*channels))].ChannelId)
-				if err != nil {
-					errStr := err.Error()
-					log.Println(user.UserId, "error:", errStr)
+loop:
+	for {
+		select {
+		case <-t.C:
+			err := user.PostHeartBeat(api.Monitoring, (*channels)[rand.Intn(len(*channels))].ChannelId)
+			if err != nil {
+				errStr := err.Error()
+				log.Println(user.UserId, "error:", errStr)
 
-					if errStr == "400 Bad Request" {
-						err400++
-					} else if errStr == "500 Internal Server Error" {
-						err500++
-					} else {
-						errUnknown++
-					}
+				if errStr == "400 Bad Request" {
+					err400++
+				} else if errStr == "500 Internal Server Error" {
+					err500++
+				} else {
+					errUnknown++
 				}
-			case <-end:
-				break loop
 			}
+		case <-end:
+			break loop
 		}
+	}
 
 	t.Stop()
 	wg.Done()
