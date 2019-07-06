@@ -2,14 +2,15 @@ package run
 
 import (
 	"encoding/json"
-	traqApi "github.com/sapphi-red/go-traq"
-	"github.com/traPtitech/traQ-Bench/api"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
 	"sync"
 	"time"
+
+	traqApi "github.com/sapphi-red/go-traq"
+	"github.com/traPtitech/traQ-Bench/api"
 )
 
 type AtomicBool struct {
@@ -81,7 +82,7 @@ func Run() {
 	wg := sync.WaitGroup{}
 	for _, v := range users {
 		wg.Add(1)
-		runSingle(v, &wg, &channels)
+		go runSingle(v, &wg, &channels)
 	}
 
 	wg.Wait()
@@ -90,28 +91,26 @@ func Run() {
 }
 
 func runSingle(user *api.User, wg *sync.WaitGroup, channels *[]traqApi.Channel) {
-	go func() {
-		user.ConnectSSE()
+	user.ConnectSSE()
 
-		rand.Seed(time.Now().UnixNano())
-		time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
+	rand.Seed(time.Now().UnixNano())
+	time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
 
-		end := time.After(45 * time.Second)
-		t := time.NewTicker(3 * time.Second)
+	end := time.After(45 * time.Second)
+	t := time.NewTicker(3 * time.Second)
 
-	loop:
+  loop:
 		for {
 			select {
 			case <-t.C:
 				err := user.PostHeartBeat(api.Monitoring, (*channels)[rand.Intn(len(*channels))].ChannelId)
 				if err != nil {
-					log.Println(user.UserId+" error: ", err)
+					log.Println(user.UserId, "error:", err.Error())
 				}
 			case <-end:
 				break loop
 			}
 		}
-		t.Stop()
-		wg.Done()
-	}()
+	t.Stop()
+	wg.Done()
 }

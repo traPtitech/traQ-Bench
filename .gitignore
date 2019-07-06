@@ -1,5 +1,9 @@
-/.vscode
+.vscode
 .idea
+
 main
+
 traQ-Bench
-users.json
+traQ-Bench.exe
+
+/users.json
