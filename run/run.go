@@ -126,11 +126,19 @@ loop:
 	for {
 		select {
 		case <-t.C:
-			channelId := (*channels)[rand.Intn(len(*channels))].ChannelId
+			var channelId string
+			for _, v := range *channels {
+				if v.Name == "general" && v.ChannelId != "" {
+					channelId = v.ChannelId
+					break
+				}
+			}
 			if channelId == "" {
+				log.Println("Couldn't find channel general?")
 				continue
 			}
-			err := user.PostHeartBeat(api.Monitoring, channelId)
+
+			err := user.PostHeartBeat(api.HeartbeatStatuses[rand.Intn(len(api.HeartbeatStatuses))], channelId)
 			if err != nil {
 				errStr := err.Error()
 				log.Println(user.UserId, "error:", errStr)

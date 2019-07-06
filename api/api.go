@@ -10,7 +10,23 @@ import (
 )
 
 var (
-	baseUrl = "http://localhost:3000/api/1.0"
+	baseUrl           = "http://localhost:3000/api/1.0"
+	HeartbeatStatuses []HeartBeatStatus
+)
+
+func init() {
+	HeartbeatStatuses = make([]HeartBeatStatus, 0)
+	HeartbeatStatuses = append(HeartbeatStatuses, None)
+	HeartbeatStatuses = append(HeartbeatStatuses, Monitoring)
+	HeartbeatStatuses = append(HeartbeatStatuses, Editing)
+}
+
+type HeartBeatStatus string
+
+const (
+	None       HeartBeatStatus = "none"
+	Monitoring HeartBeatStatus = "monitoring"
+	Editing    HeartBeatStatus = "editing"
 )
 
 type User struct {
@@ -90,14 +106,6 @@ func (user *User) CreateUser(id string, pass string) (*User, error) {
 	fmt.Printf("Successfully created user with id %s\n", id)
 	return NewUser(id, pass)
 }
-
-type HeartBeatStatus string
-
-const (
-	None       HeartBeatStatus = "none"
-	Monitoring HeartBeatStatus = "monitoring"
-	Editing    HeartBeatStatus = "editing"
-)
 
 func (user *User) PostHeartBeat(status HeartBeatStatus, channelId string) error {
 	_, err := user.client.HeartbeatApi.HeartbeatPost(context.Background(), &traqApi.HeartbeatPostOpts{
