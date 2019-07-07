@@ -92,7 +92,7 @@ func Run() {
 	}
 
 	log.Printf("%v users login finished\n", len(loggedIn))
-	log.Println("Starting benchmark")
+	log.Printf("Starting benchmark with %v users\n", len(loggedIn))
 
 	// Do benchmark
 	admin, err := api.NewUser("traq", "traq")
@@ -137,7 +137,7 @@ func Run() {
 
 	wg.Wait()
 
-	log.Println("Benchmark finished")
+	log.Printf("Benchmark finished with %v users\n", len(loggedIn))
 
 	log.Println("SSE events received:", sseReceived)
 	log.Println("400 Error:", err400)
