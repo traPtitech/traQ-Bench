@@ -3,7 +3,9 @@ package init
 import (
 	"encoding/json"
 	"github.com/traPtitech/traQ-Bench/api"
+	"github.com/traPtitech/traQ-Bench/run"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"sync"
@@ -20,9 +22,16 @@ func Init() {
 	mut := sync.Mutex{}
 	users := make([]*api.User, 0)
 
-	for i := 0; i < 30; i++ {
+	max := int(math.Ceil(float64(run.MaxUsers) / float64(run.WaitBlock)))
+
+	for i := 0; i < max; i++ {
 		wg := sync.WaitGroup{}
-		for j := 0; j < 10; j++ {
+		endIndex := (i + 1) * run.WaitBlock
+		if i == max-1 {
+			endIndex = run.MaxUsers
+		}
+		toCreate := users[i*run.WaitBlock : endIndex]
+		for j := 0; j < len(toCreate); j++ {
 			id := "user" + strconv.Itoa(i*10+j+1)
 			pass := "userpassword" + strconv.Itoa(i*10+j+1)
 
@@ -66,7 +75,7 @@ func Init() {
 // DumpUsers User情報をusers.jsonに書き出します 既に(user1, userpassword1), (user2, userpassword2)...がローカルにある場合
 func DumpUsers() {
 	users := make([]*api.User, 0)
-	for i := 0; i < 300; i++ {
+	for i := 0; i < run.MaxUsers; i++ {
 		users = append(users, &api.User{
 			UserId:   "user" + strconv.Itoa(i+1),
 			Password: "userpassword" + strconv.Itoa(i+1),

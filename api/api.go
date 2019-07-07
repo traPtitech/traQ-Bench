@@ -4,22 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/antihax/optional"
-	"github.com/r3labs/sse"
 	traqApi "github.com/sapphi-red/go-traq"
 	"log"
+	"sync/atomic"
 )
 
 var (
 	baseUrl           = "http://localhost:3000/api/1.0"
-	HeartbeatStatuses []HeartBeatStatus
+	HeartbeatStatuses = []HeartBeatStatus{None, Monitoring, Editing}
+	SseEvents         = []string{"USER_JOINED", "USER_LEFT", "USER_TAGS_UPDATED", "USER_GROUP_UPDATED", "USER_ICON_UPDATED", "USER_ONLINE", "USER_OFFLINE", "CHANNEL_CREATED", "CHANNEL_DELETED", "CHANNEL_UPDATED", "CHANNEL_STARED", "CHANNEL_UNSTARED", "CHANNEL_VISIBILITY_CHANGED", "MESSAGE_CREATED", "MESSAGE_UPDATED", "MESSAGE_DELETED", "MESSAGE_READ", "MESSAGE_STAMPED", "MESSAGE_UNSTAMPED", "MESSAGE_PINNED", "MESSAGE_UNPINNED", "MESSAGE_CLIPPED", "MESSAGE_UNCLIPPED", "STAMP_CREATED", "STAMP_DELETED", "TRAQ_UPDATED"}
 )
-
-func init() {
-	HeartbeatStatuses = make([]HeartBeatStatus, 0)
-	HeartbeatStatuses = append(HeartbeatStatuses, None)
-	HeartbeatStatuses = append(HeartbeatStatuses, Monitoring)
-	HeartbeatStatuses = append(HeartbeatStatuses, Editing)
-}
 
 type HeartBeatStatus string
 
@@ -67,7 +61,7 @@ func (user *User) Login() error {
 			}),
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	for _, v := range res.Cookies() {
@@ -103,7 +97,7 @@ func (user *User) CreateUser(id string, pass string) (*User, error) {
 		return &User{}, err
 	}
 
-	fmt.Printf("Successfully created user with id %s\n", id)
+	log.Printf("Successfully created user with id %s\n", id)
 	return NewUser(id, pass)
 }
 
@@ -118,8 +112,20 @@ func (user *User) PostHeartBeat(status HeartBeatStatus, channelId string) error 
 	return err
 }
 
-func (user *User) ConnectSSE() {
-	_ = sse.NewClient(baseUrl + "/notification")
+func (user *User) ConnectSSE(sseReceived *int32) {
+	// log.Printf("Connecting sse for user %s\n", user.UserId)
+	ch, err := OpenURL(user, baseUrl+"/notification")
+	if err != nil {
+		log.Printf("Failed to connect sse for user %s: %s", user.UserId, err)
+		return
+	}
+
+	go func() {
+		for _ = range ch {
+			// log.Printf("%s sse event %s received: %s\n", user.UserId, e.Name, e.Data)
+			atomic.AddInt32(sseReceived, 1)
+		}
+	}()
 }
 
 func (user *User) GetChannels() ([]traqApi.Channel, error) {

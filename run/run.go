@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"sync"
@@ -16,11 +17,17 @@ type AtomicBool struct {
 	Bool bool
 }
 
-type httpErrors struct {
-	err400     int
-	err500     int
-	errUnknown int
+type metrics struct {
+	sseReceived int
+	err400      int
+	err500      int
+	errUnknown  int
 }
+
+var (
+	MaxUsers  = 300
+	WaitBlock = 10
+)
 
 func Run() {
 	log.Println("run")
@@ -54,26 +61,37 @@ func Run() {
 		return
 	}
 
-	log.Println("Loaded users.json")
+	log.Printf("Logging in for %v users", MaxUsers)
+	max := int(math.Ceil(float64(MaxUsers) / float64(WaitBlock)))
+	mut := sync.Mutex{}
+	loggedIn := make([]*api.User, 0)
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < max; i++ {
+		endIndex := (i + 1) * WaitBlock
+		if i == max-1 {
+			endIndex = MaxUsers
+		}
+		usersToLogin := users[i*WaitBlock : endIndex]
+
 		wg := sync.WaitGroup{}
-		for j := 0; j < 10; j++ {
+		for _, v := range usersToLogin {
 			wg.Add(1)
-			user := users[i*10+j]
-			go func() {
+			go func(user *api.User) {
 				err := user.Login()
 				if err != nil {
 					log.Println("User "+user.UserId+" login failed", err)
 					return
 				}
+				mut.Lock()
+				loggedIn = append(loggedIn, user)
+				mut.Unlock()
 				wg.Done()
-			}()
+			}(v)
 		}
 		wg.Wait()
 	}
 
-	log.Println("Users login finished")
+	log.Printf("%v users login finished\n", len(loggedIn))
 	log.Println("Starting benchmark")
 
 	// Do benchmark
@@ -100,18 +118,20 @@ func Run() {
 		return
 	}
 
+	sseReceived := 0
 	err400 := 0
 	err500 := 0
 	errUnknown := 0
 
 	wg := sync.WaitGroup{}
-	for _, v := range users {
+	for _, v := range loggedIn {
 		wg.Add(1)
 		go func(v *api.User) {
-			errs := runSingle(v, &wg, channelId)
-			err400 += errs.err400
-			err500 += errs.err500
-			errUnknown += errs.errUnknown
+			m := runSingle(v, &wg, channelId)
+			sseReceived += m.sseReceived
+			err400 += m.err400
+			err500 += m.err500
+			errUnknown += m.errUnknown
 		}(v)
 	}
 
@@ -119,16 +139,18 @@ func Run() {
 
 	log.Println("Benchmark finished")
 
+	log.Println("SSE events received:", sseReceived)
 	log.Println("400 Error:", err400)
 	log.Println("500 Error:", err500)
 	log.Println("Unknown Error:", errUnknown)
 }
 
-func runSingle(user *api.User, wg *sync.WaitGroup, channelId string) *httpErrors {
-	user.ConnectSSE()
-
+func runSingle(user *api.User, wg *sync.WaitGroup, channelId string) *metrics {
 	rand.Seed(time.Now().UnixNano())
 	time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
+
+	sseReceived := int32(0)
+	user.ConnectSSE(&sseReceived)
 
 	end := time.After(45 * time.Second)
 	t := time.NewTicker(3 * time.Second)
@@ -162,9 +184,10 @@ loop:
 	t.Stop()
 	wg.Done()
 
-	return &httpErrors{
-		err400:     err400,
-		err500:     err500,
-		errUnknown: errUnknown,
+	return &metrics{
+		sseReceived: int(sseReceived),
+		err400:      err400,
+		err500:      err500,
+		errUnknown:  errUnknown,
 	}
 }
