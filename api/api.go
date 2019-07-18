@@ -123,7 +123,7 @@ func (user *User) ConnectSSE(sseReceived *int32, channelId *string) {
 
 	go func() {
 		for e := range ch {
-			log.Printf("%s sse event %s received: %s\n", user.UserId, e.Name, e.Data)
+			// log.Printf("%s sse event %s received: %s\n", user.UserId, e.Name, e.Data)
 			atomic.AddInt32(sseReceived, 1)
 			switch e.Name {
 			case "MESSAGE_CREATED":
