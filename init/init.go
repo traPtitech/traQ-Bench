@@ -88,7 +88,9 @@ func DumpUsers() {
 	bytes, err := json.Marshal(users)
 	if _, err := os.Stat("./users.json"); err == nil {
 		err = os.Remove("./users.json")
-		log.Println("Failed to remove file", err)
+		if err != nil {
+			log.Println("Failed to remove file", err)
+		}
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
