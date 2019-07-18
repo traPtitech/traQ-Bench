@@ -95,7 +95,6 @@ func Run(spec int) {
 	}
 
 	log.Printf("%v users login finished\n", len(loggedIn))
-	log.Printf("Starting benchmark with %v users\n", len(loggedIn))
 
 	// Do benchmark
 	admin, err := api.NewUser("traq", "traq")
@@ -125,6 +124,8 @@ func Run(spec int) {
 	err400 := 0
 	err500 := 0
 	errUnknown := 0
+
+	log.Printf("Starting benchmark with %v users\n", len(loggedIn))
 
 	wg := sync.WaitGroup{}
 	for _, v := range loggedIn {
