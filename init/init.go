@@ -52,27 +52,7 @@ func Init() {
 		wg.Wait()
 	}
 
-	bytes, err := json.Marshal(users)
-	if _, err := os.Stat("./users.json"); err == nil {
-		err = os.Remove("./users.json")
-		if err != nil {
-			log.Println("Failed to remove file", err)
-		}
-	} else if !os.IsNotExist(err) {
-		panic(err)
-	}
-
-	file, err := os.Create("./users.json")
-	if err != nil {
-		log.Println("Failed to create to file", err)
-	}
-
-	_, err = file.Write(bytes)
-	if err != nil {
-		log.Println("Failed to output to file", err)
-	}
-
-	_ = file.Close()
+	DumpUsers()
 }
 
 // DumpUsers User情報をusers.jsonに書き出します 既に(user1, userpassword1), (user2, userpassword2)...がローカルにある場合

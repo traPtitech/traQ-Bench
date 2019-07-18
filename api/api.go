@@ -136,10 +136,20 @@ func (user *User) GetChannels() ([]traqApi.Channel, error) {
 	return channels, nil
 }
 
-func (user *User) GetChannelMessages(channelId string, limit int32, offset int32) ([]traqApi.Message, error) {
-	messages, _, err := user.client.MessageApi.ChannelsChannelIDMessagesGet(context.Background(), channelId, &traqApi.ChannelsChannelIDMessagesGetOpts{
+func (user *User) GetChannelMessages(channelId string, limit int32, offset int32) (messages []traqApi.Message, err error) {
+	messages, _, err = user.client.MessageApi.ChannelsChannelIDMessagesGet(context.Background(), channelId, &traqApi.ChannelsChannelIDMessagesGetOpts{
 		Limit:  optional.NewInt32(limit),
 		Offset: optional.NewInt32(offset),
 	})
-	return messages, err
+	return
+}
+
+func (user *User) PostChannelMessage(channelId string, content string) (message traqApi.Message, err error) {
+	message, _, err = user.client.MessageApi.ChannelsChannelIDMessagesPost(context.Background(), channelId, &traqApi.ChannelsChannelIDMessagesPostOpts{
+		InlineObject20: optional.NewInterface(
+			traqApi.InlineObject20{
+				Text: content,
+			}),
+	})
+	return
 }
