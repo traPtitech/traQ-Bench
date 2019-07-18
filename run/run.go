@@ -2,6 +2,7 @@ package run
 
 import (
 	"encoding/json"
+	openapi "github.com/sapphi-red/go-traq"
 	constant "github.com/traPtitech/traQ-Bench/const"
 	"io/ioutil"
 	"log"
@@ -28,6 +29,10 @@ type metrics struct {
 const (
 	WaitBlock = 10
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func Run(spec int) {
 	maxUsers := constant.MaxUsers
@@ -104,20 +109,15 @@ func Run(spec int) {
 		return
 	}
 
-	channelId := ""
 	channels, err := admin.GetChannels()
 	if err != nil {
 		log.Println("Failed to get channels")
 		return
 	}
-	for _, v := range channels {
-		if v.Name == "general" && v.ChannelId != "" {
-			channelId = v.ChannelId
-			break
-		}
-	}
-	if channelId == "" {
-		log.Println("Couldn't find channel general?")
+
+	spam := getChannelId(channels, "spam")
+	if spam == "" {
+		log.Println("Failed to get spam channel id?")
 		return
 	}
 
@@ -132,7 +132,7 @@ func Run(spec int) {
 	for _, v := range loggedIn {
 		wg.Add(1)
 		go func(v *api.User) {
-			m := runSingle(v, &wg, channelId)
+			m := runSingle(v, &wg, spam)
 			sseReceived += m.sseReceived
 			err400 += m.err400
 			err500 += m.err500
@@ -150,7 +150,16 @@ func Run(spec int) {
 	log.Println("Unknown Error:", errUnknown)
 }
 
-func runSingle(user *api.User, wg *sync.WaitGroup, channelId string) *metrics {
+func getChannelId(channels []openapi.Channel, name string) string {
+	for _, v := range channels {
+		if v.Name == name && v.ChannelId != "" {
+			return v.ChannelId
+		}
+	}
+	return ""
+}
+
+func runSingle(user *api.User, wg *sync.WaitGroup, spam string) *metrics {
 	rand.Seed(time.Now().UnixNano())
 	time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
 
@@ -164,7 +173,7 @@ func runSingle(user *api.User, wg *sync.WaitGroup, channelId string) *metrics {
 	err500 := 0
 	errUnknown := 0
 
-	_, err := user.GetChannelMessages(channelId, 20, 0)
+	_, err := user.GetChannelMessages(spam, 20, 0)
 	if err != nil {
 		log.Println(user.UserId, "error:", err)
 	}
@@ -173,7 +182,21 @@ loop:
 	for {
 		select {
 		case <-t.C:
-			err := user.PostHeartBeat(api.HeartbeatStatuses[rand.Intn(len(api.HeartbeatStatuses))], channelId)
+			err := user.PostHeartBeat(api.HeartbeatStatuses[rand.Intn(len(api.HeartbeatStatuses))], spam)
+			if err != nil {
+				errStr := err.Error()
+				log.Println(user.UserId, "error:", errStr)
+
+				if errStr == "400 Bad Request" {
+					err400++
+				} else if errStr == "500 Internal Server Error" {
+					err500++
+				} else {
+					errUnknown++
+				}
+			}
+
+			_, err = user.PostChannelMessage(spam, randStringRunes(32))
 			if err != nil {
 				errStr := err.Error()
 				log.Println(user.UserId, "error:", errStr)
@@ -200,4 +223,14 @@ loop:
 		err500:      err500,
 		errUnknown:  errUnknown,
 	}
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
