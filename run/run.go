@@ -164,7 +164,7 @@ func runSingle(user *api.User, wg *sync.WaitGroup, spam string) *metrics {
 	time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
 
 	sseReceived := int32(0)
-	user.ConnectSSE(&sseReceived)
+	user.ConnectSSE(&sseReceived, &spam)
 
 	end := time.After(45 * time.Second)
 	t := time.NewTicker(3 * time.Second)
