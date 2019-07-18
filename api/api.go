@@ -122,10 +122,16 @@ func (user *User) ConnectSSE(sseReceived *int32, channelId *string) {
 	}
 
 	go func() {
-		for _ = range ch {
-			// log.Printf("%s sse event %s received: %s\n", user.UserId, e.Name, e.Data)
+		for e := range ch {
+			log.Printf("%s sse event %s received: %s\n", user.UserId, e.Name, e.Data)
 			atomic.AddInt32(sseReceived, 1)
-			user.GetChannelMessages(*channelId, 20, 0)
+			switch e.Name {
+			case "MESSAGE_CREATED":
+				_, err := user.GetMessage(fmt.Sprintf("%v", e.Data["id"]))
+				if err != nil {
+					log.Println(user.UserId, "error:", err)
+				}
+			}
 		}
 	}()
 }
@@ -153,5 +159,10 @@ func (user *User) PostChannelMessage(channelId string, content string) (message 
 				Text: content,
 			}),
 	})
+	return
+}
+
+func (user *User) GetMessage(messageId string) (message traqApi.Message, err error) {
+	message, _, err = user.client.MessageApi.MessagesMessageIDGet(context.Background(), messageId)
 	return
 }

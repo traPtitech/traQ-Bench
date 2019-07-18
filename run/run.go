@@ -196,17 +196,19 @@ loop:
 				}
 			}
 
-			_, err = user.PostChannelMessage(spam, randStringRunes(32))
-			if err != nil {
-				errStr := err.Error()
-				log.Println(user.UserId, "error:", errStr)
+			if rand.Float64() < 0.01 {
+				_, err = user.PostChannelMessage(spam, randStringRunes(32))
+				if err != nil {
+					errStr := err.Error()
+					log.Println(user.UserId, "error:", errStr)
 
-				if errStr == "400 Bad Request" {
-					err400++
-				} else if errStr == "500 Internal Server Error" {
-					err500++
-				} else {
-					errUnknown++
+					if errStr == "400 Bad Request" {
+						err400++
+					} else if errStr == "500 Internal Server Error" {
+						err500++
+					} else {
+						errUnknown++
+					}
 				}
 			}
 		case <-end:
