@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/antihax/optional"
-	traqApi "github.com/sapphi-red/go-traq"
 	"log"
 	"sync/atomic"
+
+	"github.com/antihax/optional"
+	traqApi "github.com/sapphi-red/go-traq"
 )
 
 var (
@@ -112,7 +113,7 @@ func (user *User) PostHeartBeat(status HeartBeatStatus, channelId string) error 
 	return err
 }
 
-func (user *User) ConnectSSE(sseReceived *int32) {
+func (user *User) ConnectSSE(sseReceived *int32, channelId *string) {
 	// log.Printf("Connecting sse for user %s\n", user.UserId)
 	ch, err := OpenURL(user, baseUrl+"/notification")
 	if err != nil {
@@ -124,6 +125,7 @@ func (user *User) ConnectSSE(sseReceived *int32) {
 		for _ = range ch {
 			// log.Printf("%s sse event %s received: %s\n", user.UserId, e.Name, e.Data)
 			atomic.AddInt32(sseReceived, 1)
+			user.GetChannelMessages(*channelId, 20, 0)
 		}
 	}()
 }
