@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	constant "github.com/traPtitech/traQ-Bench/const"
 	i "github.com/traPtitech/traQ-Bench/init"
 	r "github.com/traPtitech/traQ-Bench/run"
 	"log"
@@ -20,7 +21,7 @@ func main() {
 		if max, err := strconv.Atoi(maxStr); err == nil {
 			r.Run(max)
 		} else {
-			r.Run(300)
+			r.Run(constant.MaxUsers)
 		}
 	case "userdump":
 		i.DumpUsers()

@@ -2,6 +2,7 @@ package run
 
 import (
 	"encoding/json"
+	constant "github.com/traPtitech/traQ-Bench/const"
 	"io/ioutil"
 	"log"
 	"math"
@@ -24,14 +25,14 @@ type metrics struct {
 	errUnknown  int
 }
 
-var (
-	MaxUsers  = 300
+const (
 	WaitBlock = 10
 )
 
 func Run(spec int) {
-	if 0 < spec && spec < MaxUsers {
-		MaxUsers = spec
+	maxUsers := constant.MaxUsers
+	if 0 < spec && spec < constant.MaxUsers {
+		maxUsers = spec
 	}
 	log.Println("run")
 
@@ -64,15 +65,15 @@ func Run(spec int) {
 		return
 	}
 
-	log.Printf("Logging in for %v users", MaxUsers)
-	max := int(math.Ceil(float64(MaxUsers) / float64(WaitBlock)))
+	log.Printf("Logging in for %v users", maxUsers)
+	max := int(math.Ceil(float64(maxUsers) / float64(WaitBlock)))
 	mut := sync.Mutex{}
 	loggedIn := make([]*api.User, 0)
 
 	for i := 0; i < max; i++ {
 		endIndex := (i + 1) * WaitBlock
 		if i == max-1 {
-			endIndex = MaxUsers
+			endIndex = maxUsers
 		}
 		usersToLogin := users[i*WaitBlock : endIndex]
 
