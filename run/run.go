@@ -29,7 +29,10 @@ var (
 	WaitBlock = 10
 )
 
-func Run() {
+func Run(spec int) {
+	if 0 < spec && spec < MaxUsers {
+		MaxUsers = spec
+	}
 	log.Println("run")
 
 	if _, err := os.Stat("./users.json"); err != nil {

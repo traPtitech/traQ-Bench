@@ -5,6 +5,7 @@ import (
 	i "github.com/traPtitech/traQ-Bench/init"
 	r "github.com/traPtitech/traQ-Bench/run"
 	"log"
+	"strconv"
 )
 
 func main() {
@@ -15,7 +16,12 @@ func main() {
 	case "init":
 		i.Init()
 	case "run":
-		r.Run()
+		maxStr := flag.Arg(1)
+		if max, err := strconv.Atoi(maxStr); err == nil {
+			r.Run(max)
+		} else {
+			r.Run(300)
+		}
 	case "userdump":
 		i.DumpUsers()
 	default:
