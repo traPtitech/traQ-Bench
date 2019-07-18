@@ -135,3 +135,11 @@ func (user *User) GetChannels() ([]traqApi.Channel, error) {
 	}
 	return channels, nil
 }
+
+func (user *User) GetChannelMessages(channelId string, limit int32, offset int32) ([]traqApi.Message, error) {
+	messages, _, err := user.client.MessageApi.ChannelsChannelIDMessagesGet(context.Background(), channelId, &traqApi.ChannelsChannelIDMessagesGetOpts{
+		Limit:  optional.NewInt32(limit),
+		Offset: optional.NewInt32(offset),
+	})
+	return messages, err
+}

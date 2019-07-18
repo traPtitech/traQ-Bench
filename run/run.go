@@ -162,6 +162,11 @@ func runSingle(user *api.User, wg *sync.WaitGroup, channelId string) *metrics {
 	err500 := 0
 	errUnknown := 0
 
+	_, err := user.GetChannelMessages(channelId, 20, 0)
+	if err != nil {
+		log.Println(user.UserId, "error:", err)
+	}
+
 loop:
 	for {
 		select {
